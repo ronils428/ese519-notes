@@ -8,6 +8,8 @@
 |   Memory      | 16 GB 2133 MHz LPDDR3                                    |
 |   StatUp Disk | Macintosh HD                                             |
 |   Graphics    | Intel Iris Plus Graphics 655 1536 MB                     |
+|   Board       | Adafruit QT Py                                           |
+
 
 
 ## Setting Up Terminal
@@ -40,3 +42,114 @@ In order to connect to RP2040’s REPL, we will follow this guide (https://learn
 ls /dev/tty.*
 ```
 The output of the above command should appear as follows:
+
+![image](https://github.com/ronils428/ese519-notes/blob/main/ports.png)
+
+```
+screen /dev/tty.usbmodem14201
+```
+Using the above command I can directly connect to the RP2040’s Serial Console. Whenever I need to exit, I can simply hit <kbd>Ctrl</kbd> + <kbd>A</kbd> + <kbd>K</kbd> and then <kbd>y</kbd> when the prompt asking to confirm pops up.
+
+
+# Installing the C SDK
+
+Now we will be moving on to installing the C SDK onto the Adafruit QT Py board. We will be follwoing this guide (https://datasheets.raspberrypi.com/pico/getting-started-with-pico.pdf), however since this guide was meant for the Pico breakout board for the 
+RP2040 some of the steps will be irrelvant / different. I've included all the necessary steps I took to get the hello_world example up and running. FOR ALL OF THE MULTI-STEP CODE BLOCKS ONLY INPUT ONE LINE AT A TIME AND HIT ENTER AFTER EACH COMMAND.
+
+For this first part, you can start with the board unplugged. In your terminal input the following commands to create a new folder on your computer in a specific location. 
+
+```
+cd ~/
+mkdir pico
+cd pico
+```
+
+From here we will need to clone the pico-sdk and pico-examples git repositories.
+
+```
+git clone -b master https://github.com/raspberrypi/pico-sdk.git
+cd pico-sdk
+git submodule update --init
+cd ..
+git clone -b master https://github.com/raspberrypi/pico-examples.git
+```
+
+Next, because we are using macOS, we need to get homebrew to finish the installation. The command to install homebrew is shown below. To find the official, most updated version, checkout the Homebrew website (https://brew.sh/).
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
+```
+
+From here we need to install the toolchain.
+```
+brew install cmake
+brew tap ArmMbed/homebrew-formulae
+brew install arm-none-eabi-gcc
+```
+
+Now we should have everything installed and we should be inside the ~/pico directory in our terminal. Typing ```ls``` in the terminal should output two folders ```pico-sdk``` and ```pico-examples```. We then want to follow the commands down below to ensure that everything is up to date.
+```
+cd pico-sdk
+git pull
+git submodule update
+```
+
+We are almost ready to output Hello World! to our serial console! We just need to get the files ready. We do this by creating a build directory. From the pico directory we created earlier, ```cd``` into ```pico-examples``` and create a build directory.
+```
+cd pico-examples
+mkdir build
+cd build
+```
+
+Then, assuming you cloned the ```pico-sdk``` and ```pico-examples``` repositories into the same directory side-by-side, set the
+```PICO_SDK_PATH```.
+```
+export PICO_SDK_PATH=../../pico-sdk
+```
+
+Then run the following command:
+```
+cmake ..
+```
+
+Before moving on, we need to check one thing first. ```cd``` all the way back out of the build directory and into the hello_world folder. The file path that we want to target is ```hello_world/serial``` and use ```touch``` to open the CMakeLists.txt file. Ensure that the following two lines are in the .txt file exactly as follows. This will ensure that our serial message can be ready via USB.
+```
+pico_enable_stdio_usb(hello_world 1)
+pico_enable_stdio_uart(hello_world 0) 
+```
+
+If everything works which it did for me, you can then hit ```ls``` and see all the ready made examples. For now we will just be getting the ```hello_world``` example ready. 
+
+```
+cd hello_world
+make -j4
+```
+
+Use the commands that you've learned this far in the guide (```cd``` and ```ls```) to ensure that a ```hello_usb.uf2``` file has been created inside the hello_world/usb folder.
+
+Now we are ready to connect the board. Connect the board to your computer via micro-USB cable, making sure that you hold down the
+```BOOT``` button to force it into USB Mass Storage Mode. The ```BOOT```. The boot button is shown below.
+
+![image](https://github.com/ronils428/ese519-notes/blob/main/boot.png)
+
+After holding the button and connecting to the computer, after a while you should see a drive popup with a name that starts with RPI. You can now let go of the ```BOOT``` button. In your Finder, click on the top menu bar and click on Go -> Enclosing Folder. This should open up a Finder window where your pico folder resides. Click inside pico -> pico-examples -> build -> hello_world -> usb and drag the ```hello_usb.uf2``` file into the drive that popped up earlier. This drive should automatically disappear from your computer. After about two minutes, head over to the terminal and type the commands from the "Connecting to Serial Console" section. I've included them down below for your convenience. 
+```
+ls /dev/tty.*
+```
+
+If you see your board connected in the ports then go ahead and use the same screen command as before.
+
+```
+screen /dev/tty.usbmodem14201
+```
+
+If everything worked then you should be seeing the following in your terminal screen.
+
+![image](https://github.com/ronils428/ese519-notes/blob/main/helloworld.png)
+
+
+CONGRATULATIONS YOU HAVE SUCCESSFULLY GOT YOUR QT PY BOARD SENDING DATA OVER USB VIA THE C SDK!!
+
+Notes:
+- This was definitely no easy task so congrats for making it this far!
+- Following the instructions very closely helped tremendously. I personally ran into some issues where I was connected to the board but I didn't hold down the ```BOOT``` button so I was uploading code to the python version.
+- Was also previously trying to follow the Linux instructions in the guide when I needed to scroll down to seciton 9.1 which had instructions for installing the toolchain on macOS.
